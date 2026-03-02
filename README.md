@@ -5,7 +5,7 @@ A React + Vite + TypeScript application for demonstrating L2PS (Layer 2 Privacy 
 ## 🚀 Quick Start
 
 ```bash
-cd docs/poc-app
+cd docs/l2ps-poc
 npm install
 npm run dev
 # Open http://localhost:5173
@@ -36,7 +36,7 @@ L2PS transactions are **encrypted client-side** before leaving the wallet. The P
 
 **Option A: Environment Variables (Recommended)**
 
-Create `.env` in `docs/poc-app/`:
+Create `.env` in `docs/l2ps-poc/`:
 ```bash
 VITE_NODE_URL="http://127.0.0.1:53550"
 VITE_L2PS_UID="testnet_l2ps_001"
@@ -208,7 +208,7 @@ The Learn tab provides interactive demonstrations:
 ## 📁 File Structure
 
 ```
-poc-app/
+l2ps-poc/
 ├── src/
 │   ├── App.tsx              # Main application logic
 │   ├── utils/
@@ -244,6 +244,6 @@ poc-app/
 
 ## 🔗 Related Documentation
 
-- [L2PS Quickstart](../../src/libs/l2ps/L2PS_QUICKSTART.md) - Node setup from scratch
-- [L2PS Architecture](../../src/libs/l2ps/L2PS_DTR_IMPLEMENTATION.md) - Technical details
-- [ZK Proofs](../../src/libs/l2ps/zk/README.md) - Proof system documentation
+- [L2PS Overview](https://docs.kynesys.xyz/backend/l2ps-subnet-framework/overview) - What is L2PS and how it works
+- [L2PS Quickstart](https://docs.kynesys.xyz/backend/l2ps-subnet-framework/quickstart) - Get started with L2PS
+- [How L2PS Transactions Are Handled](https://docs.kynesys.xyz/backend/l2ps-subnet-framework/how-are-l2ps-transactions-handled) - Transaction lifecycle deep dive
