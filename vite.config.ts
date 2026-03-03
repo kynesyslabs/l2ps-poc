@@ -15,6 +15,9 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    exclude: ['snarkjs'],
+  },
   server: {
     proxy: {
       '/rpc': {
@@ -22,6 +25,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/rpc/, ''),
         ws: true,
+      },
+      '/zk': {
+        target: 'http://127.0.0.1:53550',
+        changeOrigin: true,
       },
     },
   },
