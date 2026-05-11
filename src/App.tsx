@@ -31,6 +31,7 @@ function App() {
     nodeUrl: wallet.nodeUrl,
     showToast,
     addLog,
+    fetchBalance: wallet.fetchBalance,
   })
 
   // Connect wallet with post-connect data fetch
