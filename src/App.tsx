@@ -10,9 +10,10 @@ import SendTab from './components/SendTab'
 import HistoryTab from './components/HistoryTab'
 import LearnTab from './components/LearnTab'
 import IdentityTab from './components/identity/IdentityTab'
+import MessagingTab from './components/MessagingTab'
 import './index.css'
 
-type TabId = 'send' | 'history' | 'learn' | 'identity'
+type TabId = 'send' | 'history' | 'learn' | 'identity' | 'messaging'
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabId>('send')
@@ -155,6 +156,16 @@ function App() {
               <IdentityTab
                 address={wallet.address}
                 isConnected={wallet.isConnected}
+              />
+            </div>
+          )}
+
+          {activeTab === 'messaging' && (
+            <div className="tab-content-narrow">
+              <MessagingTab
+                demos={wallet.demos}
+                nodeUrl={wallet.nodeUrl}
+                l2psUid={tx.l2psUid}
               />
             </div>
           )}

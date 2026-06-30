@@ -343,7 +343,7 @@ export function useTransactions({
 
         const validityResponse = await demos.confirm(finalTx)
 
-        const validityData = validityResponse.response as Record<string, unknown>
+        const validityData = validityResponse.response as unknown as Record<string, unknown>
         const validityDataInner = validityData?.data as Record<string, unknown> | undefined
         if (!validityDataInner?.valid) {
           throw new Error((validityDataInner?.message as string)?.trim() ?? 'Transaction rejected by node')
