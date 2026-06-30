@@ -484,6 +484,41 @@ const LearnTab: FC<LearnTabProps> = ({ demos, address, l2psUid, addLog }) => {
           </table>
         </div>
       </div>
+
+      {/* Section: L2PS Messaging */}
+      <div className="learn-section">
+        <h3>💬 L2PS Messaging</h3>
+        <p>
+          Beyond transactions, an L2PS subnet can carry <strong>instant messages</strong>.
+          The node runs a messaging server (<code>ws://&lt;node&gt;:3006</code>) and peers
+          exchange encrypted messages isolated to their L2PS network, with offline delivery
+          when a recipient reconnects.
+        </p>
+        <div className="learn-box">
+          <p style={{ margin: '0 0 0.5rem' }}>
+            <strong>A peer is a wallet</strong> (an Ed25519 key), not a node. To register, a
+            peer signs <code>register:&#123;publicKey&#125;:&#123;timestamp&#125;</code> with
+            its key — the server verifies ownership before letting it send or receive. Open
+            this POC in two browsers with two mnemonics to chat between two peers.
+          </p>
+        </div>
+        <div className="learn-box fee-box" style={{ marginTop: '0.75rem' }}>
+          <div className="fee-item">
+            <span className="fee-label">Messaging Fee</span>
+            <span className="fee-value" style={{ color: '#4ade80' }}>0 DEM</span>
+          </div>
+          <p className="fee-note">
+            Messaging is <strong>free</strong> — no balance required (unlike a 1 DEM L2PS
+            transaction). Limits are technical only: message ≤ 256 KB, ciphertext ≤ 128 KB,
+            and the offline queue holds 200 messages per sender.
+          </p>
+        </div>
+        <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#94a3b8' }}>
+          Try it in the <strong>💬 Messaging</strong> tab. For production apps, use the SDK's
+          <code> L2PSMessagingPeer</code> (real x25519+AES-GCM e2e encryption) rather than the
+          tab's transport-only test harness.
+        </p>
+      </div>
     </div>
   )
 }
