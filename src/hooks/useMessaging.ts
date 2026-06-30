@@ -85,7 +85,16 @@ export function useMessaging(
     }
     setMyKey(pubKey)
 
-    const ws = new WebSocket(wsUrl)
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(wsUrl)
+    } catch (e) {
+      // An invalid URL throws synchronously here — release 'connecting' so the
+      // URL field + reconnect button don't stay disabled.
+      setError(`invalid WebSocket URL: ${(e as Error).message}`)
+      setStatus('error')
+      return
+    }
     wsRef.current = ws
 
     ws.onopen = async () => {
@@ -162,6 +171,9 @@ export function useMessaging(
           break
         case 'error':
           setError(`${p.code ?? 'ERROR'}: ${p.message ?? ''}`)
+          // A register/auth error arrives before 'registered' — release
+          // 'connecting' or the UI stays locked.
+          setStatus((s) => (s === 'connecting' ? 'error' : s))
           break
       }
     }
@@ -175,14 +187,14 @@ export function useMessaging(
     }
   }, [demos, wsUrl, l2psUid])
 
-  const send = useCallback(async (to: string, text: string) => {
+  const send = useCallback(async (to: string, text: string): Promise<boolean> => {
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       setError('Not connected')
-      return
+      return false
     }
     const recipient = to.trim()
-    if (!recipient || !text) return
+    if (!recipient || !text) return false
     const messageHash = await sha256hex(text)
     const timestamp = Date.now()
     // The server requires a non-empty ciphertext + nonce. This is a transport
@@ -205,6 +217,7 @@ export function useMessaging(
       ...m,
       { direction: 'out', peer: recipient, text, hash: messageHash, ts: timestamp },
     ])
+    return true
   }, [])
 
   const disconnect = useCallback(() => {

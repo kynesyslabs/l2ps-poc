@@ -152,19 +152,24 @@ const MessagingTab: FC<MessagingTabProps> = ({ demos, nodeUrl, l2psUid }) => {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && m.status === 'registered') {
-                m.send(to, text)
-                setText('')
+            onKeyDown={async (e) => {
+              if (
+                e.key === 'Enter' &&
+                m.status === 'registered' &&
+                to.trim() &&
+                text
+              ) {
+                const ok = await m.send(to, text)
+                if (ok) setText('')
               }
             }}
             placeholder="message…"
             style={{ flex: 1, padding: '8px 10px', borderRadius: 8 }}
           />
           <button
-            onClick={() => {
-              m.send(to, text)
-              setText('')
+            onClick={async () => {
+              const ok = await m.send(to, text)
+              if (ok) setText('')
             }}
             disabled={m.status !== 'registered' || !to.trim() || !text}
             style={{ padding: '8px 18px', borderRadius: 8 }}
