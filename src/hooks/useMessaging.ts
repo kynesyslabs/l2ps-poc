@@ -185,13 +185,17 @@ export function useMessaging(
     if (!recipient || !text) return
     const messageHash = await sha256hex(text)
     const timestamp = Date.now()
+    // The server requires a non-empty ciphertext + nonce. This is a transport
+    // test, so the plaintext is base64'd into ciphertext and the nonce/ephemeral
+    // key are random fillers (not a real x25519+AES-GCM envelope).
+    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(12))))
+    const ephemeralKey = toHex(crypto.getRandomValues(new Uint8Array(32)))
     ws.send(
       JSON.stringify({
         type: 'send',
         payload: {
           to: recipient,
-          // TEST transport: plaintext base64'd into ciphertext (not e2e).
-          encrypted: { ciphertext: b64encode(text), nonce: '', ephemeralKey: '' },
+          encrypted: { ciphertext: b64encode(text), nonce, ephemeralKey },
           messageHash,
         },
         timestamp,
