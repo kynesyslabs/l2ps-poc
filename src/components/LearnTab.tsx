@@ -491,8 +491,8 @@ const LearnTab: FC<LearnTabProps> = ({ demos, address, l2psUid, addLog }) => {
         <p>
           Beyond transactions, an L2PS subnet can carry <strong>instant messages</strong>.
           The node runs a messaging server (<code>ws://&lt;node&gt;:3006</code>) and peers
-          exchange encrypted messages isolated to their L2PS network, with offline delivery
-          when a recipient reconnects.
+          exchange messages isolated to their L2PS network, with offline delivery when a
+          recipient reconnects. This POC tab is a transport test only — not e2e encrypted.
         </p>
         <div className="learn-box">
           <p style={{ margin: '0 0 0.5rem' }}>

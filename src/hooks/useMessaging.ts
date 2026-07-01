@@ -153,13 +153,20 @@ export function useMessaging(
         }
         case 'message_sent':
         case 'message_queued':
-          setMessages((m) =>
-            m.map((cm) =>
-              cm.hash === p.messageHash && cm.direction === 'out'
+          // Match only the first still-unacked outgoing row for this hash. The
+          // hash is derived from the text, so the same body sent twice (or to
+          // two peers) shares a hash and would otherwise flip every match.
+          setMessages((m) => {
+            const idx = m.findIndex(
+              (cm) => cm.direction === 'out' && cm.hash === p.messageHash && !cm.state,
+            )
+            if (idx === -1) return m
+            return m.map((cm, i) =>
+              i === idx
                 ? { ...cm, state: msg.type === 'message_queued' ? 'queued' : 'sent' }
                 : cm,
-            ),
-          )
+            )
+          })
           break
         case 'peer_online':
           setOnlinePeers((ps) =>
