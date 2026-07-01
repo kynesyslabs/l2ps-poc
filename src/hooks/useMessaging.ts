@@ -79,14 +79,17 @@ export function useMessaging(
     }
     setMyKey(pubKey)
 
+    // demos.keypair is the connected wallet's ed25519 keypair (public getter).
+    // A missing key is non-fatal: outbound encryption only needs the recipient's
+    // public key, so register/send still work — only inbound messages won't
+    // decrypt (they render as [unable to decrypt]).
     try {
-      const pk = (demos as unknown as { keypair: { privateKey: Uint8Array | ArrayLike<number> } })
-        .keypair.privateKey
-      myPrivRef.current = pk instanceof Uint8Array ? pk : Uint8Array.from(pk)
-    } catch (e) {
-      setError(`could not read signing key for decryption: ${(e as Error).message}`)
-      setStatus('error')
-      return
+      myPrivRef.current = Uint8Array.from(demos.keypair.privateKey)
+    } catch {
+      myPrivRef.current = null
+    }
+    if (!myPrivRef.current) {
+      setError('Could not read the wallet key — inbound messages will not decrypt.')
     }
 
     let ws: WebSocket
@@ -147,7 +150,14 @@ export function useMessaging(
           const ts = msg.timestamp ?? Date.now()
           const offline = Boolean(p.offline)
           const priv = myPrivRef.current
-          // Decryption is async; resolve it then append so onmessage stays sync.
+          // Append synchronously so rows keep arrival order, then fill in the
+          // decrypted text — decryption is async and would otherwise let a
+          // faster-decrypting later message jump ahead of an earlier one.
+          const decrypting = '[decrypting…]'
+          setMessages((m) => [
+            ...m,
+            { direction: 'in', peer: from, text: decrypting, hash, ts, offline },
+          ])
           void (async () => {
             let text: string
             try {
@@ -156,15 +166,20 @@ export function useMessaging(
             } catch {
               text = '[unable to decrypt]'
             }
-            setMessages((m) => [...m, { direction: 'in', peer: from, text, hash, ts, offline }])
+            setMessages((m) => {
+              const idx = m.findIndex(
+                (cm) => cm.direction === 'in' && cm.hash === hash && cm.text === decrypting,
+              )
+              return idx === -1 ? m : m.map((cm, i) => (i === idx ? { ...cm, text } : cm))
+            })
           })()
           break
         }
         case 'message_sent':
         case 'message_queued':
           // Match only the first still-unacked outgoing row for this hash. The
-          // hash is derived from the text, so the same body sent twice (or to
-          // two peers) shares a hash and would otherwise flip every match.
+          // hash is per-ciphertext (unique per send), but a resent identical
+          // envelope could repeat it, so still guard on the first un-acked row.
           setMessages((m) => {
             const idx = m.findIndex(
               (cm) => cm.direction === 'out' && cm.hash === p.messageHash && !cm.state,
@@ -211,7 +226,6 @@ export function useMessaging(
     }
     const recipient = to.trim()
     if (!recipient || !text) return false
-    const messageHash = await sha256hex(text)
     const timestamp = Date.now()
     // Seal the body to the recipient's identity key — real X25519+AES-GCM e2e.
     // The server relays this envelope opaquely and never sees plaintext.
@@ -222,6 +236,10 @@ export function useMessaging(
       setError(`could not encrypt for recipient: ${(e as Error).message}`)
       return false
     }
+    // Hash the ciphertext, not the plaintext: the server only needs this for
+    // ack/dedup correlation, and hashing plaintext would leak message equality
+    // (and allow dictionary guessing of short messages) to the relay.
+    const messageHash = await sha256hex(encrypted.ciphertext)
     ws.send(
       JSON.stringify({
         type: 'send',
