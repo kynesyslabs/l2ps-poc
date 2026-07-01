@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Demos } from '@kynesyslabs/demosdk/websdk'
+import { sealTo, openFrom, type EncryptedEnvelope } from '../crypto/e2eMessaging'
 
-// Minimal client for the L2PS instant-messaging server (node feature
-// `l2ps-messaging`, default ws://<node>:3006). Implements the wire protocol
-// directly — register with an ed25519 proof, then send/receive — so the POC
-// can exercise the messaging server without pulling the newer SDK's
-// L2PSMessagingPeer. See src/features/l2ps-messaging/L2PS_MESSAGING_QUICKSTART.md.
+// Client for the L2PS instant-messaging server (node feature `l2ps-messaging`,
+// default ws://<node>:3006). Implements the wire protocol directly — register
+// with an ed25519 proof, then send/receive — so the POC can exercise the server
+// without pulling a newer SDK peer. See node:
+// src/features/l2ps-messaging/L2PS_MESSAGING_QUICKSTART.md.
 //
-// NOTE: this is a transport TEST harness. Messages are base64-wrapped, NOT
-// end-to-end encrypted — it proves register/send/receive/offline-queue work.
-// Real x25519+AES-GCM e2e lives in the SDK's L2PSMessagingPeer.
+// Messages are end-to-end encrypted: the body is sealed to the recipient's
+// identity ed25519 key (X25519 ECDH + AES-256-GCM — see ./crypto/e2eMessaging).
+// The server only relays the { ciphertext, nonce, ephemeralKey } envelope and
+// never sees plaintext.
 
 export type MsgStatus = 'idle' | 'connecting' | 'registered' | 'error' | 'closed'
 
@@ -27,16 +29,6 @@ function toHex(u8: Uint8Array): string {
   return Array.from(u8)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
-}
-function b64encode(s: string): string {
-  return btoa(unescape(encodeURIComponent(s)))
-}
-function b64decode(s: string): string {
-  try {
-    return decodeURIComponent(escape(atob(s)))
-  } catch {
-    return s
-  }
 }
 async function sha256hex(s: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
@@ -67,6 +59,8 @@ export function useMessaging(
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [myKey, setMyKey] = useState<string>('')
   const wsRef = useRef<WebSocket | null>(null)
+  // The wallet's ed25519 private key, kept in a ref to decrypt inbound messages.
+  const myPrivRef = useRef<Uint8Array | null>(null)
 
   const connect = useCallback(async () => {
     if (!demos) {
@@ -84,6 +78,16 @@ export function useMessaging(
       return
     }
     setMyKey(pubKey)
+
+    try {
+      const pk = (demos as unknown as { keypair: { privateKey: Uint8Array | ArrayLike<number> } })
+        .keypair.privateKey
+      myPrivRef.current = pk instanceof Uint8Array ? pk : Uint8Array.from(pk)
+    } catch (e) {
+      setError(`could not read signing key for decryption: ${(e as Error).message}`)
+      setStatus('error')
+      return
+    }
 
     let ws: WebSocket
     try {
@@ -137,18 +141,23 @@ export function useMessaging(
           setOnlinePeers((p.onlinePeers as string[]) ?? [])
           break
         case 'message': {
-          const enc = (p.encrypted as { ciphertext?: string }) ?? {}
-          setMessages((m) => [
-            ...m,
-            {
-              direction: 'in',
-              peer: String(p.from ?? ''),
-              text: b64decode(enc.ciphertext ?? ''),
-              hash: String(p.messageHash ?? ''),
-              ts: msg.timestamp ?? Date.now(),
-              offline: Boolean(p.offline),
-            },
-          ])
+          const enc = p.encrypted as EncryptedEnvelope | undefined
+          const from = String(p.from ?? '')
+          const hash = String(p.messageHash ?? '')
+          const ts = msg.timestamp ?? Date.now()
+          const offline = Boolean(p.offline)
+          const priv = myPrivRef.current
+          // Decryption is async; resolve it then append so onmessage stays sync.
+          void (async () => {
+            let text: string
+            try {
+              if (!enc || !priv) throw new Error('missing envelope or key')
+              text = await openFrom(enc, priv)
+            } catch {
+              text = '[unable to decrypt]'
+            }
+            setMessages((m) => [...m, { direction: 'in', peer: from, text, hash, ts, offline }])
+          })()
           break
         }
         case 'message_sent':
@@ -204,19 +213,19 @@ export function useMessaging(
     if (!recipient || !text) return false
     const messageHash = await sha256hex(text)
     const timestamp = Date.now()
-    // The server requires a non-empty ciphertext + nonce. This is a transport
-    // test, so the plaintext is base64'd into ciphertext and the nonce/ephemeral
-    // key are random fillers (not a real x25519+AES-GCM envelope).
-    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(12))))
-    const ephemeralKey = toHex(crypto.getRandomValues(new Uint8Array(32)))
+    // Seal the body to the recipient's identity key — real X25519+AES-GCM e2e.
+    // The server relays this envelope opaquely and never sees plaintext.
+    let encrypted: EncryptedEnvelope
+    try {
+      encrypted = await sealTo(recipient, text)
+    } catch (e) {
+      setError(`could not encrypt for recipient: ${(e as Error).message}`)
+      return false
+    }
     ws.send(
       JSON.stringify({
         type: 'send',
-        payload: {
-          to: recipient,
-          encrypted: { ciphertext: b64encode(text), nonce, ephemeralKey },
-          messageHash,
-        },
+        payload: { to: recipient, encrypted, messageHash },
         timestamp,
       }),
     )

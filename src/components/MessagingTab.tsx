@@ -29,7 +29,7 @@ const MessagingTab: FC<MessagingTabProps> = ({ demos, nodeUrl, l2psUid }) => {
         <h2 style={{ margin: '0 0 4px' }}>💬 L2PS Messaging</h2>
         <p style={{ margin: 0, fontSize: 13, opacity: 0.7 }}>
           Register on the L2PS instant-messaging server with your ed25519 key and
-          exchange messages with another peer. Transport test (not e2e encrypted).
+          exchange messages with another peer. End-to-end encrypted (X25519 + AES-256-GCM).
         </p>
       </div>
 
