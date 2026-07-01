@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 
-type TabType = 'send' | 'history' | 'learn' | 'identity'
+type TabType = 'send' | 'history' | 'learn' | 'identity' | 'messaging'
 
 interface TabBarProps {
   activeTab: TabType
@@ -34,6 +34,12 @@ const TabBar: FC<TabBarProps> = ({ activeTab, setActiveTab, historyCount = 0 }) 
         onClick={() => setActiveTab('identity')}
       >
         🛡️ Identity
+      </button>
+      <button
+        className={`tab ${activeTab === 'messaging' ? 'active' : ''}`}
+        onClick={() => setActiveTab('messaging')}
+      >
+        💬 Messaging
       </button>
     </div>
   )

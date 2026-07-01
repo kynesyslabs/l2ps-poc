@@ -186,6 +186,94 @@ The Learn tab provides interactive demonstrations:
 
 ---
 
+## 💬 7. L2PS Messaging (Test Tab)
+
+The **💬 Messaging** tab exercises the node's **L2PS instant-messaging server**
+(node feature `l2ps-messaging`, default `ws://<node>:3006`). It lets you register
+two wallets and exchange messages — no code required.
+
+> A **peer is a wallet** (an Ed25519 key), not a node. Two peers = two mnemonics,
+> both connected to the **same** messaging server. Open the POC in two browser
+> sessions to run two peers at once.
+
+Messaging is **free** — no DEM, no balance required (fees are hard-zeroed in the
+server). The only limits are technical: message ≤256 KB, ciphertext ≤128 KB, and
+the offline queue holds 200 messages per sender.
+
+### Run it locally
+
+**1. Start a node with messaging enabled** (`node` repo):
+
+```bash
+# enable the messaging server + a matching L2PS subnet
+./scripts/l2ps-create-subnet.sh testnet_l2ps_001      # once — creates data/l2ps/<uid>/
+L2PS_MESSAGING_ENABLED=true L2PS_MESSAGING_PORT=3006 docker compose up -d
+# look for: [L2PS-IM] Messaging server started on port 3006
+```
+
+See the node repo `src/features/l2ps-messaging/L2PS_MESSAGING_QUICKSTART.md` for
+the full protocol.
+
+**2. Point the POC at it** — `.env`:
+
+```bash
+VITE_NODE_URL="http://localhost:53550"
+VITE_MSG_WS_URL="ws://localhost:3006"   # the messaging WS (override the :3006 default)
+VITE_L2PS_UID="testnet_l2ps_001"        # must match the subnet you created
+```
+
+**3. Test with two peers:**
+
+1. Open the POC in **two** browser sessions (e.g. normal + incognito).
+2. In each: **Login** → Generate a (different) mnemonic → Connect.
+3. In each: **💬 Messaging** → **Connect & Register** (status turns green `registered`).
+4. Copy one peer's key from the `You: 0x…` line into the other's **recipient** field
+   (or click the peer chip), type a message, **Send**.
+5. *(Offline queue)* Disconnect peer B, send from A, then re-register B — the
+   message arrives `from queue`.
+
+### Connect at the code level
+
+The whole flow lives in [`src/hooks/useMessaging.ts`](src/hooks/useMessaging.ts) —
+a minimal WebSocket client over the wire protocol (no dependency on the newer
+SDK's `L2PSMessagingPeer`, so the pinned `demosdk@2.8.16` stays):
+
+```ts
+// register: sign the proof string with the wallet's ed25519 key
+const timestamp = Date.now()
+const proof = toHex(
+  (await demos.crypto.sign(
+    'ed25519',
+    new TextEncoder().encode(`register:${publicKey}:${timestamp}`),
+  )).signature,
+)
+ws.send(JSON.stringify({
+  type: 'register',
+  payload: { publicKey, l2psUid, proof },
+  timestamp,
+}))
+// -> { type: 'registered', payload: { onlinePeers: [...] } }
+
+// send: ciphertext + a non-empty nonce are required
+ws.send(JSON.stringify({
+  type: 'send',
+  payload: {
+    to: recipientPublicKey,
+    encrypted: { ciphertext, nonce, ephemeralKey },
+    messageHash,
+  },
+  timestamp: Date.now(),
+}))
+// recipient receives: { type: 'message', payload: { from, encrypted, offline } }
+```
+
+> **Transport test only.** The tab base64-wraps plaintext into `ciphertext` — it is
+> **not** end-to-end encrypted. Real x25519+AES-GCM lives in the SDK's
+> `L2PSMessagingPeer`; this validates the server's register/send/receive/offline path.
+> Wire it into a production app via the SDK, not this hook.
+
+---
+
 ## 🏗️ Architecture Status
 
 | Component | Status | Notes |
