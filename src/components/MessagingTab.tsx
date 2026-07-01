@@ -120,50 +120,70 @@ const MessagingTab: FC<MessagingTabProps> = ({
     }, [])
 
     const onWireFrame = (raw: string) => {
-        let frame: { type: string; payload: any; timestamp?: number }
-        try { frame = JSON.parse(raw) } catch { return }
+        let parsed: unknown
+        try { parsed = JSON.parse(raw) } catch { return }
+        // The wire comes from a remote server — never trust the shape. Drop
+        // anything that isn't an object with a string `type`, and guard each
+        // payload field the case actually dereferences.
+        if (!parsed || typeof parsed !== 'object' || typeof (parsed as { type?: unknown }).type !== 'string') {
+            addLog('[L2PS-IM] malformed frame dropped')
+            return
+        }
+        const frame = parsed as { type: string; payload?: Record<string, any>; timestamp?: number }
+        const payload = frame.payload ?? {}
         switch (frame.type) {
             case 'registered': {
+                const online: string[] = Array.isArray(payload.onlinePeers) ? payload.onlinePeers : []
                 setState('connected')
-                setPeers(frame.payload.onlinePeers ?? [])
-                addLog(`[L2PS-IM] registered, ${frame.payload.onlinePeers?.length ?? 0} online peers`)
+                setPeers(online)
+                addLog(`[L2PS-IM] registered, ${online.length} online peers`)
                 showToast('success', 'Connected to messaging server')
                 break
             }
             case 'peer_joined':
-                setPeers(prev => [...new Set([...prev, frame.payload.publicKey])])
-                addLog(`[L2PS-IM] peer joined: ${frame.payload.publicKey.slice(0, 12)}…`)
+                if (typeof payload.publicKey !== 'string') break
+                setPeers(prev => [...new Set([...prev, payload.publicKey])])
+                addLog(`[L2PS-IM] peer joined: ${payload.publicKey.slice(0, 12)}…`)
                 break
             case 'peer_left':
-                setPeers(prev => prev.filter(p => p !== frame.payload.publicKey))
-                addLog(`[L2PS-IM] peer left: ${frame.payload.publicKey.slice(0, 12)}…`)
+                if (typeof payload.publicKey !== 'string') break
+                setPeers(prev => prev.filter(p => p !== payload.publicKey))
+                addLog(`[L2PS-IM] peer left: ${payload.publicKey.slice(0, 12)}…`)
                 break
             case 'message': {
+                if (!payload.encrypted || typeof payload.from !== 'string') {
+                    addLog('[L2PS-IM] malformed message frame dropped')
+                    break
+                }
                 try {
-                    const plaintext = decryptForSubnet(frame.payload.encrypted, AES_KEY)
+                    const plaintext = decryptForSubnet(payload.encrypted, AES_KEY)
                     const msg: IncomingMessage = {
-                        id: frame.payload.messageHash,
-                        from: frame.payload.from,
+                        id: String(payload.messageHash ?? ''),
+                        from: payload.from,
                         plaintext,
                         timestamp: frame.timestamp ?? Date.now(),
-                        offline: frame.payload.offline,
+                        offline: Boolean(payload.offline),
                     }
                     setConversation(prev => [...prev, msg])
-                    addLog(`[L2PS-IM] message from ${msg.from.slice(0, 12)}…: ${plaintext.slice(0, 40)}${frame.payload.offline ? ' (offline)' : ''}`)
+                    // Log the event, not the content — the conversation pane already
+                    // renders the plaintext; the activity log is a wider surface.
+                    addLog(`[L2PS-IM] message received from ${msg.from.slice(0, 12)}…${msg.offline ? ' (offline)' : ''}`)
                 } catch (e) {
                     addLog(`[L2PS-IM] decrypt failed: ${(e as Error).message}`)
                 }
                 break
             }
             case 'message_sent':
-                addLog(`[L2PS-IM] message delivered: ${frame.payload.messageHash.slice(0, 12)}…`)
+                if (typeof payload.messageHash !== 'string') break
+                addLog(`[L2PS-IM] message delivered: ${payload.messageHash.slice(0, 12)}…`)
                 break
             case 'message_queued':
-                addLog(`[L2PS-IM] message queued (recipient offline): ${frame.payload.messageHash.slice(0, 12)}…`)
+                if (typeof payload.messageHash !== 'string') break
+                addLog(`[L2PS-IM] message queued (recipient offline): ${payload.messageHash.slice(0, 12)}…`)
                 break
             case 'error':
-                setError(`${frame.payload.code}: ${frame.payload.message}`)
-                showToast('error', 'Messaging error', frame.payload.message)
+                setError(`${payload.code ?? 'ERROR'}: ${payload.message ?? ''}`)
+                showToast('error', 'Messaging error', typeof payload.message === 'string' ? payload.message : undefined)
                 break
         }
     }
