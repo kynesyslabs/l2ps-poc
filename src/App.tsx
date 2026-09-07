@@ -156,6 +156,7 @@ function App() {
               <IdentityTab
                 address={wallet.address}
                 isConnected={wallet.isConnected}
+                nodeUrl={wallet.nodeUrl}
               />
             </div>
           )}

@@ -29,7 +29,13 @@ export type VoteStatus =
   | 'failed'
   | 'double_spend'
 
-export function useZkIdentity(address: string, isConnected: boolean) {
+export function useZkIdentity(address: string, isConnected: boolean, nodeUrl?: string) {
+  // Resolve the ZK read + RPC write endpoints on the connected node. Falls back to
+  // the vite dev-proxy paths (/zk, /rpc) when no absolute node URL is supplied.
+  const nodeBase = nodeUrl && /^https?:\/\//.test(nodeUrl) ? nodeUrl.replace(/\/+$/, '') : ''
+  const zkBase = nodeBase ? `${nodeBase}/zk` : '/zk'
+  const rpcBase = nodeBase ? nodeBase : '/rpc'
+
   // Identity State
   const [secret, setSecret] = useState('')
   const [commitment, setCommitment] = useState('')
@@ -66,14 +72,14 @@ export function useZkIdentity(address: string, isConnected: boolean) {
   // --- Network Polling ---
 
   const syncNetwork = useCallback(async () => {
-    const result = await fetchMerkleRoot('/zk')
+    const result = await fetchMerkleRoot(zkBase)
     if (result) {
       setNodeStatus('online')
       setLeafCount(result.leafCount)
     } else {
       setNodeStatus('offline')
     }
-  }, [])
+  }, [zkBase])
 
   useEffect(() => {
     const interval = setInterval(syncNetwork, 5000)
@@ -119,7 +125,7 @@ export function useZkIdentity(address: string, isConnected: boolean) {
     addLog('Broadcasting Commitment to Node...', 'info')
 
     if (nodeStatus === 'online') {
-      const result = await submitCommitment(commitment, '/rpc')
+      const result = await submitCommitment(commitment, rpcBase)
       if (result.success) {
         addLog('Commitment accepted by Node.', 'success')
         addToLedger(commitment, 'commitment')
@@ -134,7 +140,7 @@ export function useZkIdentity(address: string, isConnected: boolean) {
       setLeafCount(prev => prev + 1)
       addLog('Commitment mined (Simulated)! Added to Merkle Tree.', 'success')
     }
-  }, [commitment, address, nodeStatus, addLog, addToLedger])
+  }, [commitment, address, nodeStatus, addLog, addToLedger, rpcBase])
 
   const castVote = useCallback(
     async (isDoubleSpendAttempt = false) => {
@@ -190,7 +196,7 @@ export function useZkIdentity(address: string, isConnected: boolean) {
 
         // Try submitting to node if online
         if (nodeStatus === 'online') {
-          const result = await submitProof(proof, publicSignals, '/rpc')
+          const result = await submitProof(proof, publicSignals, rpcBase)
           if (!result.success) {
             addLog(`Node rejected proof: ${result.message}`, 'err')
             // Still record locally for the demo
@@ -207,7 +213,7 @@ export function useZkIdentity(address: string, isConnected: boolean) {
         addLog(`Proof generation failed: ${err.message || 'Unknown'}`, 'err')
       }
     },
-    [commitment, secret, address, voteContext, leafCount, nodeStatus, usedNullifiers, ledger, addLog, addToLedger]
+    [commitment, secret, address, voteContext, leafCount, nodeStatus, usedNullifiers, ledger, addLog, addToLedger, rpcBase]
   )
 
   const testDoubleSpend = useCallback(() => {

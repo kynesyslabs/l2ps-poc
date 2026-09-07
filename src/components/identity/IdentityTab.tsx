@@ -7,9 +7,10 @@ import SecurityPanel from './SecurityPanel'
 interface IdentityTabProps {
   address: string
   isConnected: boolean
+  nodeUrl: string
 }
 
-const IdentityTab: FC<IdentityTabProps> = ({ address, isConnected }) => {
+const IdentityTab: FC<IdentityTabProps> = ({ address, isConnected, nodeUrl }) => {
   const {
     // Identity
     secret,
@@ -35,7 +36,7 @@ const IdentityTab: FC<IdentityTabProps> = ({ address, isConnected }) => {
     castVote,
     testDoubleSpend,
     addLog,
-  } = useZkIdentity(address, isConnected)
+  } = useZkIdentity(address, isConnected, nodeUrl)
 
   return (
     <div className="identity-grid">
