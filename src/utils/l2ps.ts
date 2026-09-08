@@ -60,6 +60,7 @@ export async function buildInnerTransaction(
     amount: number,
     payload: TxPayload,
     operation = "send",
+    nonce?: number,
 ): Promise<Transaction> {
     const tx = await demos.tx.prepare()
     tx.content.type = "native" as Transaction["content"]["type"]
@@ -71,6 +72,11 @@ export async function buildInnerTransaction(
         args: [normalizeHex(to), amount],
         ...payload  // Include l2ps_uid and other metadata
     }] as unknown as Transaction["content"]["data"]
+    // A native (L1) tx is submitted as-is, so it needs the next sequential
+    // nonce; nonceEnforcement rejects nonce 0. Must be set before signing.
+    if (typeof nonce === "number") {
+        tx.content.nonce = nonce
+    }
     tx.content.timestamp = Date.now()
 
     return demos.sign(tx)
