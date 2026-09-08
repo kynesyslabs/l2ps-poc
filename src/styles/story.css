@@ -201,3 +201,42 @@
 @media (max-width: 860px) {
   .idguide-steps { grid-template-columns: 1fr; }
 }
+
+/* ---------- RPC quick-pick presets ---------- */
+.rpc-badge {
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.03em;
+  padding: 0.15rem 0.45rem; border-radius: 5px; text-transform: uppercase;
+}
+.rpc-badge.devnet { color: #c4b5fd; background: rgba(139, 92, 246, 0.2); }
+.rpc-badge.testnet { color: #67e8f9; background: rgba(0, 212, 255, 0.16); }
+.rpc-badge.local { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); }
+.rpc-badge.custom { color: #94a3b8; background: rgba(148, 163, 184, 0.15); }
+
+.rpc-presets {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;
+  margin: 0.15rem 0 0.55rem;
+}
+.rpc-chip {
+  display: flex; flex-direction: column; gap: 0.1rem; align-items: flex-start;
+  padding: 0.5rem 0.6rem; cursor: pointer; text-align: left;
+  border-radius: 9px; border: 1px solid var(--dark-400, #3a3a3a);
+  background: var(--dark-200, #1a1a1a); color: #cbd5e1;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+}
+.rpc-chip:hover { border-color: rgba(139, 92, 246, 0.5); background: var(--dark-300, #2a2a2a); }
+.rpc-chip:active { transform: translateY(1px); }
+.rpc-chip.active {
+  border-color: #8b5cf6;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0.05));
+}
+.rpc-chip-name { font-size: 0.8rem; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 0.2rem; }
+.rpc-chip.active .rpc-chip-name { color: #fff; }
+.rpc-chip-star { color: #fbbf24; font-size: 0.72rem; }
+.rpc-chip-hint {
+  font-size: 0.62rem; color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (max-width: 560px) {
+  .rpc-presets { grid-template-columns: 1fr; }
+}
