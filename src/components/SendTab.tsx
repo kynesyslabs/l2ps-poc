@@ -1,6 +1,10 @@
 import type { FC } from 'react'
+import type { Demos } from '@kynesyslabs/demosdk/websdk'
+import PrivacyReveal from './PrivacyReveal'
 
 interface SendTabProps {
+  demos: Demos | null
+  nodeUrl: string
   mode: 'l1' | 'l2ps'
   setMode: (m: 'l1' | 'l2ps') => void
   recipient: string
@@ -26,6 +30,8 @@ interface SendTabProps {
 }
 
 const SendTab: FC<SendTabProps> = ({
+  demos,
+  nodeUrl,
   mode,
   setMode,
   recipient,
@@ -116,6 +122,19 @@ const SendTab: FC<SendTabProps> = ({
           onChange={e => setTxMessage(e.target.value)}
           placeholder="Enter message..."
         />
+
+        {mode === 'l2ps' && (
+          <PrivacyReveal
+            demos={demos}
+            recipient={recipient}
+            amount={amount}
+            message={txMessage}
+            l2psUid={l2psUid}
+            aesKey={aesKey}
+            iv={iv}
+            nodeUrl={nodeUrl}
+          />
+        )}
 
         <label className="label">Count</label>
         <input

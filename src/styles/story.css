@@ -1,0 +1,203 @@
+/* Story-mode UI: privacy money-shot, guided intro, identity narrative.
+   Uses the existing token system (--primary cyan, --accent-purple private,
+   --dark scale, --radius). Scoped class names to avoid clashing with index.css. */
+
+/* ---------- Privacy money-shot ---------- */
+.reveal {
+  margin: 1rem 0 0.5rem;
+}
+.reveal-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.reveal-toggle {
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #c4b5fd;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.reveal-toggle:hover {
+  background: rgba(139, 92, 246, 0.22);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+.reveal-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+.reveal-card {
+  border-radius: var(--radius, 0.875rem);
+  padding: 0.85rem 0.9rem;
+  min-width: 0;
+  border: 1px solid var(--dark-400, #3a3a3a);
+  background: var(--dark-100, #0a0a0a);
+}
+.reveal-card.plain {
+  border-color: rgba(0, 212, 255, 0.28);
+  background: linear-gradient(180deg, rgba(0, 212, 255, 0.06), rgba(0, 212, 255, 0.01));
+}
+.reveal-card.cipher {
+  border-color: rgba(139, 92, 246, 0.32);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02));
+}
+.reveal-card.cipher.is-revealed {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02));
+}
+.reveal-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+.reveal-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+}
+.reveal-badge.plain { color: #67e8f9; background: rgba(0, 212, 255, 0.12); }
+.reveal-badge.cipher { color: #c4b5fd; background: rgba(139, 92, 246, 0.16); }
+.is-revealed .reveal-badge.cipher { color: #6ee7b7; background: rgba(16, 185, 129, 0.16); }
+.reveal-sub { font-size: 0.64rem; color: #64748b; }
+
+.reveal-fields { margin: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.reveal-fields > div { display: flex; align-items: baseline; gap: 0.5rem; }
+.reveal-fields > div.wide { flex-direction: column; gap: 0.15rem; }
+.reveal-fields dt {
+  margin: 0; min-width: 3.6rem; flex-shrink: 0;
+  font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b;
+}
+.reveal-fields dd { margin: 0; font-size: 0.82rem; color: #e2e8f0; word-break: break-all; }
+.reveal-fields .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+}
+.cipher-blob { color: #a78bfa; }
+.redact {
+  display: inline-block; color: transparent; user-select: none;
+  background: repeating-linear-gradient(45deg, #7c3aed, #7c3aed 3px, #5b21b6 3px, #5b21b6 6px);
+  border-radius: 4px; padding: 0 0.35rem; letter-spacing: 0.1em;
+}
+
+.reveal-bridge {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.35rem; padding: 0 0.15rem; min-width: 76px;
+}
+.reveal-lock { font-size: 1.4rem; transition: transform 0.2s ease; }
+.reveal-lock.busy { animation: reveal-pulse 0.9s ease-in-out infinite; }
+@keyframes reveal-pulse { 0%,100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.18); opacity: 1; } }
+.reveal-arrow {
+  width: 100%; height: 2px; min-width: 34px;
+  background: linear-gradient(90deg, rgba(0,212,255,0.6), rgba(139,92,246,0.8));
+  background-size: 200% 100%; animation: reveal-flow 1.4s linear infinite;
+}
+@keyframes reveal-flow { from { background-position: 0 0; } to { background-position: -200% 0; } }
+.reveal-algo { font-size: 0.6rem; text-align: center; color: #8b93ff; line-height: 1.25; }
+
+.reveal-foot {
+  margin: 0.7rem 0 0; font-size: 0.72rem; color: #94a3b8; line-height: 1.45;
+  border-left: 2px solid rgba(139, 92, 246, 0.4); padding-left: 0.6rem;
+}
+
+@media (max-width: 720px) {
+  .reveal-grid { grid-template-columns: 1fr; }
+  .reveal-bridge { flex-direction: row; min-width: 0; padding: 0.15rem 0; gap: 0.6rem; }
+  .reveal-arrow { width: 40px; height: 2px; }
+  .reveal-algo { text-align: left; }
+}
+
+/* ---------- Guided intro ---------- */
+.intro-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  animation: intro-fade 0.2s ease;
+}
+@keyframes intro-fade { from { opacity: 0; } to { opacity: 1; } }
+.intro-card {
+  width: min(520px, 100%); max-height: 92vh; overflow-y: auto;
+  background: linear-gradient(180deg, #14101f, #0a0a0a);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 18px; padding: 1.6rem 1.5rem 1.3rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: intro-rise 0.25s ease;
+}
+@keyframes intro-rise { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.intro-emoji { font-size: 2.2rem; }
+.intro-title { margin: 0.4rem 0 0.5rem; font-size: 1.35rem; color: #f1f5f9; }
+.intro-lede { margin: 0 0 1.1rem; font-size: 0.9rem; line-height: 1.5; color: #94a3b8; }
+.intro-features { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.3rem; }
+.intro-feature { display: flex; gap: 0.75rem; align-items: flex-start; }
+.intro-feature-icon {
+  font-size: 1.1rem; flex-shrink: 0; width: 2.2rem; height: 2.2rem;
+  display: flex; align-items: center; justify-content: center; border-radius: 10px;
+}
+.intro-feature-icon.private { background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); }
+.intro-feature-icon.anon { background: rgba(0, 212, 255, 0.12); border: 1px solid rgba(0, 212, 255, 0.28); }
+.intro-feature strong { color: #e2e8f0; font-size: 0.92rem; }
+.intro-feature p { margin: 0.2rem 0 0; font-size: 0.8rem; line-height: 1.45; color: #94a3b8; }
+.intro-cta {
+  width: 100%; padding: 0.8rem; border: none; border-radius: 12px; cursor: pointer;
+  font-size: 0.95rem; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  transition: filter 0.15s ease;
+}
+.intro-cta:hover { filter: brightness(1.1); }
+.intro-foot { margin: 0.7rem 0 0; text-align: center; font-size: 0.68rem; color: #64748b; }
+
+/* ---------- Identity guided story ---------- */
+.idguide {
+  border: 1px solid var(--dark-400, #3a3a3a);
+  border-radius: var(--radius, 0.875rem);
+  background: linear-gradient(180deg, rgba(0, 212, 255, 0.05), rgba(139, 92, 246, 0.03));
+  padding: 1rem 1.1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+.idguide-head { margin-bottom: 0.85rem; }
+.idguide-title { margin: 0 0 0.25rem; font-size: 1.15rem; color: #f1f5f9; }
+.idguide-lede { margin: 0; font-size: 0.82rem; line-height: 1.5; color: #94a3b8; max-width: 62ch; }
+.idguide-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;
+}
+.idguide-step {
+  display: flex; gap: 0.55rem; align-items: flex-start;
+  padding: 0.7rem 0.75rem; border-radius: 10px;
+  border: 1px solid var(--dark-400, #3a3a3a); background: var(--dark-100, #0a0a0a);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.idguide-step.active { border-color: rgba(139, 92, 246, 0.5); background: rgba(139, 92, 246, 0.08); }
+.idguide-step.done { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.06); }
+.idguide-num {
+  flex-shrink: 0; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 700; color: #94a3b8;
+  background: var(--dark-300, #2a2a2a); border: 1px solid var(--dark-400, #3a3a3a);
+}
+.idguide-step.active .idguide-num { color: #fff; background: #8b5cf6; border-color: #8b5cf6; }
+.idguide-step.done .idguide-num { color: #fff; background: #10b981; border-color: #10b981; }
+.idguide-body { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.idguide-body strong { font-size: 0.82rem; color: #e2e8f0; }
+.idguide-body span { font-size: 0.72rem; line-height: 1.4; color: #94a3b8; }
+.idguide-step.todo { opacity: 0.7; }
+
+@media (max-width: 860px) {
+  .idguide-steps { grid-template-columns: 1fr; }
+}

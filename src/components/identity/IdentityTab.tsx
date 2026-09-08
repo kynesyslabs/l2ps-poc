@@ -1,5 +1,6 @@
 import type { FC } from 'react'
 import { useZkIdentity } from '../../hooks/useZkIdentity'
+import IdentityGuide from './IdentityGuide'
 import VaultPanel from './VaultPanel'
 import ChainStatePanel from './ChainStatePanel'
 import SecurityPanel from './SecurityPanel'
@@ -38,7 +39,13 @@ const IdentityTab: FC<IdentityTabProps> = ({ address, isConnected, nodeUrl }) =>
     addLog,
   } = useZkIdentity(address, isConnected, nodeUrl)
 
+  const hasIdentity = !!commitment
+  const isRegistered = ledger.some(e => e.type === 'commitment')
+  const hasActed = ledger.some(e => e.type === 'nullifier') || voteStatus === 'success'
+
   return (
+    <>
+    <IdentityGuide hasIdentity={hasIdentity} isRegistered={isRegistered} hasActed={hasActed} />
     <div className="identity-grid">
       {/* Left Column: Vault */}
       <VaultPanel
@@ -73,6 +80,7 @@ const IdentityTab: FC<IdentityTabProps> = ({ address, isConnected, nodeUrl }) =>
         addLog={addLog}
       />
     </div>
+    </>
   )
 }
 

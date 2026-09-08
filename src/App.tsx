@@ -11,13 +11,22 @@ import HistoryTab from './components/HistoryTab'
 import LearnTab from './components/LearnTab'
 import IdentityTab from './components/identity/IdentityTab'
 import MessagingTab from './components/MessagingTab'
+import IntroModal from './components/IntroModal'
 import './index.css'
+import './styles/story.css'
 
 type TabId = 'send' | 'history' | 'learn' | 'identity' | 'messaging'
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabId>('send')
   const [logs, setLogs] = useState<string[]>([])
+  const [showIntro, setShowIntro] = useState(() => {
+    try { return localStorage.getItem('l2ps_intro_v1') !== 'seen' } catch { return true }
+  })
+  const closeIntro = () => {
+    try { localStorage.setItem('l2ps_intro_v1', 'seen') } catch { /* private mode */ }
+    setShowIntro(false)
+  }
 
   const addLog = useCallback((msg: string) => {
     setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev])
@@ -46,6 +55,8 @@ function App() {
 
   return (
     <div className="App">
+      {showIntro && <IntroModal onClose={closeIntro} />}
+
       {/* Toast Notifications */}
       {toasts.length > 0 && createPortal(
         <div className="toast-container">
@@ -98,6 +109,8 @@ function App() {
           {activeTab === 'send' && (
             <div className="tab-content-narrow">
               <SendTab
+                demos={wallet.demos}
+                nodeUrl={wallet.nodeUrl}
                 mode={tx.mode}
                 setMode={tx.setMode}
                 recipient={tx.recipient}
