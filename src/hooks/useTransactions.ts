@@ -60,9 +60,9 @@ export function useTransactions({
 
   // Transaction State
   const [recipient, setRecipient] = useState<string>('')
-  const [amount, setAmount] = useState<string>('0')
+  const [amount, setAmount] = useState<string>('500')
   const [txCount, setTxCount] = useState<number>(1)
-  const [txMessage, setTxMessage] = useState<string>('Hello L2PS')
+  const [txMessage, setTxMessage] = useState<string>('Invoice #42')
   const [sending, setSending] = useState<boolean>(false)
 
   // History & L2PS Status
@@ -326,7 +326,14 @@ export function useTransactions({
           message: `${txMessage} [${i + 1}/${txCount}]`
         }
 
-        const tx = await buildInnerTransaction(demos, toAddress, amountValue, payload)
+        const tx = await buildInnerTransaction(
+          demos,
+          toAddress,
+          amountValue,
+          payload,
+          'send',
+          mode === 'l1' ? currentNonce : undefined,
+        )
         let finalTx = tx
 
         if (mode === 'l2ps' && l2ps) {

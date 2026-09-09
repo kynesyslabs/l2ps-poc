@@ -9,6 +9,13 @@ interface LoginScreenProps {
   connectWallet: () => void
 }
 
+// Quick-pick RPC endpoints so nobody has to type a long node URL.
+const RPC_PRESETS = [
+  { id: 'devnet', name: 'Devnet', hint: 'dev.node2 · finalizes', url: 'https://dev.node2.demos.sh:53650', recommended: true },
+  { id: 'testnet', name: 'Testnet', hint: 'node2 · public', url: 'https://node2.demos.sh:53550', recommended: false },
+  { id: 'local', name: 'Local', hint: '127.0.0.1', url: 'http://localhost:53550', recommended: false },
+] as const
+
 const LoginScreen: FC<LoginScreenProps> = ({
   mnemonic,
   setMnemonic,
@@ -60,24 +67,40 @@ const LoginScreen: FC<LoginScreenProps> = ({
           <span>🔌</span> Connect Wallet
         </h2>
         <div style={{ textAlign: 'left' }}>
-          {/* Node URL with status indicator */}
-          <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            Node URL
-            <span style={{
-              fontSize: '0.7rem',
-              padding: '0.15rem 0.4rem',
-              background: 'rgba(74, 222, 128, 0.2)',
-              borderRadius: '4px',
-              color: '#4ade80'
-            }}>
-              Local
-            </span>
-          </label>
-          <input
-            value={nodeUrl}
-            onChange={e => setNodeUrl(e.target.value)}
-            placeholder="http://127.0.0.1:53550"
-          />
+          {/* Node URL with quick-pick presets + status indicator */}
+          {(() => {
+            const active = RPC_PRESETS.find(p => p.url === nodeUrl.trim())
+            return (
+              <>
+                <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  Node URL
+                  <span className={`rpc-badge ${active ? active.id : 'custom'}`}>
+                    {active ? active.name : 'Custom'}
+                  </span>
+                </label>
+                <div className="rpc-presets">
+                  {RPC_PRESETS.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`rpc-chip ${active?.id === p.id ? 'active' : ''}`}
+                      onClick={() => setNodeUrl(p.url)}
+                    >
+                      <span className="rpc-chip-name">
+                        {p.name}{p.recommended && <span className="rpc-chip-star">★</span>}
+                      </span>
+                      <span className="rpc-chip-hint">{p.hint}</span>
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={nodeUrl}
+                  onChange={e => setNodeUrl(e.target.value)}
+                  placeholder="https://your-node:53550"
+                />
+              </>
+            )
+          })()}
 
           <label className="label">Mnemonic Phrase</label>
           <textarea

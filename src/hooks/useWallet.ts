@@ -2,7 +2,9 @@ import { useState, useCallback } from 'react'
 import { Demos } from '@kynesyslabs/demosdk/websdk'
 import * as bip39 from 'bip39'
 
-export const DEFAULT_NODE_URL = import.meta.env.VITE_NODE_URL || '/rpc'
+// Default to the devnet RPC — it's a single-node net that actually finalizes,
+// so the demo works out of the box. Override with VITE_NODE_URL.
+export const DEFAULT_NODE_URL = import.meta.env.VITE_NODE_URL || 'https://dev.node2.demos.sh:53650'
 
 type ShowToastFn = (type: 'success' | 'error' | 'info', title: string, message?: string) => void
 type AddLogFn = (msg: string) => void

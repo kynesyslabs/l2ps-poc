@@ -64,6 +64,17 @@ export default function friendlyError(raw: string): { title: string; detail: str
     return { title: 'Connection Error', detail: 'Could not reach the node. Check your connection and node URL.' }
   }
 
+  // --- Node returned no validity result (SDK reads `.valid` on a 401) ---
+  // Happens when the node's confirm/broadcast write endpoint is protected
+  // (401) or consensus can't confirm the tx. The read side still works, so
+  // it surfaces as an undefined validity response inside the SDK.
+  if (/reading '?valid'?/i.test(s) || /\b401\b|unauthorized/i.test(s)) {
+    return {
+      title: 'Node did not accept the transaction',
+      detail: 'The node returned no confirmation (401 — its write endpoint is protected on this network, or consensus could not confirm). The in-browser encryption is real; on-chain settlement needs a node that accepts writes for this subnet.'
+    }
+  }
+
   // --- Generic fallback: strip server prefixes for readability ---
   const cleaned = s
     .replace(/^\[Confirm\]\s*Transaction\s*is\s*not\s*valid:\s*/i, '')
