@@ -1865,3 +1865,58 @@ details[open] > .tx-details-toggle::before {
   color: #f87171;
   border: 1px solid rgba(248, 113, 113, 0.2);
 }
+
+/* In-flight private transfer: the proof takes ~2 min, so it must read as busy */
+.tx-in-flight {
+  border-color: rgba(168, 85, 247, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.25);
+}
+
+.tx-progress {
+  margin: 0.5rem 0 0.25rem;
+}
+
+.tx-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.15) 0%, #a855f7 50%, rgba(168, 85, 247, 0.15) 100%);
+  background-size: 200% 100%;
+  animation: tx-progress-flow 1.6s linear infinite;
+}
+
+.tx-progress-late {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.15) 0%, #fbbf24 50%, rgba(251, 191, 36, 0.15) 100%);
+  background-size: 200% 100%;
+}
+
+.tx-progress-text {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #c4b5fd;
+}
+
+@keyframes tx-progress-flow {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-progress-bar { animation: none; background: #a855f7; }
+  .tx-progress-late { background: #fbbf24; }
+}
+
+.history-inflight {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #ddd6fe;
+  font-size: 0.85rem;
+}
+
+.tab-pending {
+  color: #c084fc;
+  font-weight: 600;
+}
