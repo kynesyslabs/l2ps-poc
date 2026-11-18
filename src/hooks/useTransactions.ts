@@ -316,12 +316,6 @@ export function useTransactions({
       if (currentNonce + count - 1 > confirmed + MAX_NONCE_AHEAD) {
         throw new Error(`Too many transfers are still waiting to settle (next nonce ${currentNonce}, chain at ${confirmed}). Wait until earlier ones are confirmed in History.`)
       }
-      // An L1 send queued behind a private transfer waits for that nonce to
-      // settle (~2 min), which outlasts its reference-block window, so the
-      // chain would include it as expired.
-      if (!l2ps && currentNonce > confirmed + 1) {
-        throw new Error('A private transfer from this account is still settling. Send on L1 once it shows as Settled in History (about 2 minutes).')
-      }
       const sentHashes: string[] = []
       let feeOs = 0n
 
