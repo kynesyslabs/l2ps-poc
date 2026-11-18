@@ -32,14 +32,22 @@ const getStatusColor = (status: string) => {
   }
 }
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'confirmed': return '✓ Confirmed'
-    case 'in_mempool': return '📦 Batched'
-    case 'pending': return '⚡ Executed'
-    case 'failed': return '✗ Failed'
-    default: return status
+const getStatusLabel = (tx: TxHistoryItem) => {
+  if (tx.type !== 'l2ps') {
+    return tx.status === 'confirmed' ? '✓ Confirmed' : tx.status === 'failed' ? '✗ Failed' : tx.status
   }
+  switch (tx.status) {
+    case 'confirmed': return tx.l1_block_number ? `✓ Settled in block ${tx.l1_block_number}` : '✓ Settled'
+    case 'in_mempool': return '📦 Settling on L1…'
+    case 'pending': return '⏳ Proving batch (~2 min)'
+    case 'failed': return '✗ Failed'
+    default: return tx.status
+  }
+}
+
+const elapsed = (ts: number) => {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000))
+  return s < 60 ? `${s} s ago` : `${Math.floor(s / 60)} min ${s % 60} s ago`
 }
 
 const TxCard: FC<TxCardProps> = ({ tx, revealed, onToggleReveal, addLog }) => {
@@ -52,7 +60,7 @@ const TxCard: FC<TxCardProps> = ({ tx, revealed, onToggleReveal, addLog }) => {
 
   return (
     <div
-      className={`tx-card ${isL2PS ? 'tx-l2ps' : 'tx-l1'} ${isL2PS && !revealed ? 'tx-blurred' : ''}`}
+      className={`tx-card ${isL2PS ? 'tx-l2ps' : 'tx-l1'} ${isL2PS && (tx.status === 'pending' || tx.status === 'in_mempool') ? 'tx-in-flight' : ''} ${isL2PS && !revealed ? 'tx-blurred' : ''}`}
     >
       {/* Header Row */}
       <div className="tx-header">
@@ -69,9 +77,18 @@ const TxCard: FC<TxCardProps> = ({ tx, revealed, onToggleReveal, addLog }) => {
           style={{ color: getStatusColor(tx.status) }}
           title={`Status: ${tx.status}`}
         >
-          {getStatusLabel(tx.status)}
+          {getStatusLabel(tx)}
         </div>
       </div>
+
+      {isL2PS && (tx.status === 'pending' || tx.status === 'in_mempool') && (
+        <div className="tx-progress" title="A private transfer settles on L1 when its batch proof is ready">
+          <div className={`tx-progress-bar ${tx.status === 'in_mempool' ? 'tx-progress-late' : ''}`} />
+          <span className="tx-progress-text">
+            Sent {elapsed(tx.timestamp)} · {tx.status === 'pending' ? 'proof in progress' : 'proof done, waiting for the block'}
+          </span>
+        </div>
+      )}
 
       {/* Transaction Details */}
       <div className={`tx-body ${isL2PS && !revealed ? 'blurred' : ''}`}>

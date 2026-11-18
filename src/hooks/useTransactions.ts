@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Demos } from '@kynesyslabs/demosdk/websdk'
 import {
   buildPrivateTransfer,
@@ -43,6 +43,12 @@ export interface TxHistoryItem {
   l1_block_number?: number
 }
 
+const failureMessage = (tx: Record<string, unknown>): string | undefined => {
+  if (tx.status !== 'failed') return undefined
+  const attrs = tx.attrs as { message?: unknown } | undefined
+  return typeof attrs?.message === 'string' ? attrs.message : 'Included in a block as failed'
+}
+
 type ShowToastFn = (type: 'success' | 'error' | 'info', title: string, message?: string) => void
 type AddLogFn = (msg: string) => void
 
@@ -54,6 +60,8 @@ interface UseTransactionsParams {
   showToast: ShowToastFn
   addLog: AddLogFn
   fetchBalance: (demosInstance: Demos, addr: string) => Promise<void>
+  /** Called after a send is accepted, so the UI can show its progress. */
+  onSent?: () => void
 }
 
 export function useTransactions({
@@ -64,6 +72,7 @@ export function useTransactions({
   showToast,
   addLog,
   fetchBalance,
+  onSent,
 }: UseTransactionsParams) {
   // Configuration State
   const [mode, setMode] = useState<'l1' | 'l2ps'>('l2ps')
@@ -81,7 +90,10 @@ export function useTransactions({
 
   // History & L2PS Status
   const [l1History, setL1History] = useState<TxHistoryItem[]>([])
-  const [l2psHistory, setL2psHistory] = useState<TxHistoryItem[]>([])
+  const [serverL2psHistory, setL2psHistory] = useState<TxHistoryItem[]>([])
+  // A private transfer reaches the member's history only once it is executed,
+  // and a refresh can miss it for a few seconds; the sender sees it at once.
+  const [localPending, setLocalPending] = useState<TxHistoryItem[]>([])
   const [history, setHistory] = useState<TxHistoryItem[]>([])
   const [revealedTxs, setRevealedTxs] = useState<Set<string>>(new Set())
   const [l2psMempoolInfo, setL2psMempoolInfo] = useState<Record<string, unknown> | null>(null)
@@ -93,6 +105,22 @@ export function useTransactions({
       setRecipient(address)
     }
   }, [address, recipient])
+
+  const l2psHistory = useMemo(() => {
+    const known = new Set(serverL2psHistory.map(tx => tx.hash))
+    const local = localPending.filter(tx => !known.has(tx.hash))
+    return [...local, ...serverL2psHistory].sort((a, b) => b.timestamp - a.timestamp)
+  }, [serverL2psHistory, localPending])
+
+  // Drop local entries once the member reports them, or once they are old
+  // enough that a refusal is the only explanation.
+  useEffect(() => {
+    if (localPending.length === 0) return
+    const known = new Set(serverL2psHistory.map(tx => tx.hash))
+    const now = Date.now()
+    const keep = localPending.filter(tx => !known.has(tx.hash) && now - tx.timestamp < NONCE_TRACK_TTL_MS)
+    if (keep.length !== localPending.length) setLocalPending(keep)
+  }, [serverL2psHistory, localPending])
 
   // Combine history whenever L1 or L2PS history changes, deduplicate by hash
   useEffect(() => {
@@ -210,7 +238,8 @@ export function useTransactions({
             timestamp: ts as number,
             type: 'l1' as const,
             amount: osToDem(String(txAmount)),
-            status: 'confirmed' as const,
+            status: tx.status === 'failed' ? 'failed' as const : 'confirmed' as const,
+            message: failureMessage(tx),
             from: content.from as string | undefined,
             to: content.to as string | undefined,
             l1_block_number: typeof tx.blockNumber === 'string' ? parseInt(tx.blockNumber) : tx.blockNumber as number | undefined
@@ -268,6 +297,9 @@ export function useTransactions({
 
     setSending(true)
     addLog(`Preparing to send ${count} ${typeLabel} transaction(s)...`)
+    // Kept outside the try so transfers accepted before a later one fails
+    // still show up in History.
+    const sentLocal: TxHistoryItem[] = []
 
     try {
       const amountOs = demToOs(amount)
@@ -299,6 +331,16 @@ export function useTransactions({
           await submitTransaction(demos, transfer.outer)
           feeOs += transfer.fee
           hash = transfer.inner.hash
+          sentLocal.push({
+            hash,
+            timestamp: Date.now(),
+            type: 'l2ps',
+            amount: osToDem(amountOs),
+            status: 'pending',
+            message: 'Sent to the subnet; waiting for the batch proof',
+            from: signerAddress,
+            to: toAddress,
+          })
         } else {
           const signed = await demos.transfer(toAddress, amountOs, { nonce: currentNonce })
           await submitTransaction(demos, signed)
@@ -328,11 +370,14 @@ export function useTransactions({
         `To: ${toAddress.slice(0, 10)}...${toAddress.slice(-6)}\n${hashSummary}${feeLine}`
       )
       addLog(`All ${count} transactions submitted`)
+      if (sentLocal.length > 0) setLocalPending(prev => [...sentLocal, ...prev])
+      onSent?.()
 
       setTimeout(() => { refreshData() }, 1000)
     } catch (e: unknown) {
       const err = e as Error
       const rawMsg = err.message || String(e)
+      if (sentLocal.length > 0) setLocalPending(prev => [...sentLocal, ...prev])
       const { title, detail } = friendlyError(rawMsg)
       showToast('error', title, detail)
       addLog(`Error: ${rawMsg}`)

@@ -42,6 +42,7 @@ function App() {
     showToast,
     addLog,
     fetchBalance: wallet.fetchBalance,
+    onSent: () => setActiveTab('history'),
   })
 
   // Connect wallet with post-connect data fetch
@@ -104,6 +105,7 @@ function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             historyCount={tx.history.length}
+            pendingCount={tx.l2psHistory.filter(h => h.status === 'pending' || h.status === 'in_mempool').length}
           />
 
           {activeTab === 'send' && (

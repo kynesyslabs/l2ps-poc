@@ -42,6 +42,8 @@ const HistoryTab: FC<HistoryTabProps> = ({
       ? [...l2psHistory].sort((a, b) => b.timestamp - a.timestamp)
       : [...l1History].sort((a, b) => b.timestamp - a.timestamp)
 
+  const inFlight = l2psHistory.filter(tx => tx.status === 'pending' || tx.status === 'in_mempool').length
+
   const toggleRevealed = (hash: string) => {
     setRevealedTxs((prev: Set<string>) => {
       const next = new Set(prev)
@@ -114,6 +116,12 @@ const HistoryTab: FC<HistoryTabProps> = ({
           📤 L1 ({l1History.length})
         </button>
       </div>
+
+      {inFlight > 0 && (
+        <div className="history-inflight" role="status">
+          ⏳ {inFlight} private transfer{inFlight > 1 ? 's' : ''} settling. Each batch is proved in about 2 minutes, then settles on L1.
+        </div>
+      )}
 
       {/* Filtered History */}
       {filteredHistory.length === 0 ? (

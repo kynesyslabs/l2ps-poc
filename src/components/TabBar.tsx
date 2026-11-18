@@ -6,9 +6,10 @@ interface TabBarProps {
   activeTab: TabType
   setActiveTab: (tab: TabType) => void
   historyCount?: number
+  pendingCount?: number
 }
 
-const TabBar: FC<TabBarProps> = ({ activeTab, setActiveTab, historyCount = 0 }) => {
+const TabBar: FC<TabBarProps> = ({ activeTab, setActiveTab, historyCount = 0, pendingCount = 0 }) => {
   return (
     <div className="tabs">
       <button
@@ -21,7 +22,7 @@ const TabBar: FC<TabBarProps> = ({ activeTab, setActiveTab, historyCount = 0 }) 
         className={`tab ${activeTab === 'history' ? 'active' : ''}`}
         onClick={() => setActiveTab('history')}
       >
-        History ({historyCount})
+        History ({historyCount}){pendingCount > 0 && <span className="tab-pending"> · ⏳ {pendingCount}</span>}
       </button>
       <button
         className={`tab ${activeTab === 'learn' ? 'active' : ''}`}
