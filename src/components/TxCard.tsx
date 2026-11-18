@@ -7,7 +7,7 @@ interface TxHistoryItem {
   l1BatchHash?: string
   timestamp: number
   type: 'l1' | 'l2ps'
-  amount?: number
+  amount?: string
   status: 'pending' | 'in_mempool' | 'confirmed' | 'failed'
   message?: string
   from?: string
@@ -77,10 +77,10 @@ const TxCard: FC<TxCardProps> = ({ tx, revealed, onToggleReveal, addLog }) => {
       <div className={`tx-body ${isL2PS && !revealed ? 'blurred' : ''}`}>
 
         {/* Amount */}
-        {tx.amount !== undefined && tx.amount > 0 && (
+        {tx.amount !== undefined && tx.amount !== '0' && (
           <div className="tx-row tx-row-amount">
-            <span className="tx-amount-big">{tx.amount.toLocaleString()} DEM</span>
-            {isL2PS && <span className="tx-fee-hint" title="L2PS privacy fee is automatically deducted">+ 1 DEM fee</span>}
+            <span className="tx-amount-big">{tx.amount} DEM</span>
+            {isL2PS && <span className="tx-fee-hint" title="The settlement fee is taken from the sender when the batch settles on L1">+ network fee</span>}
           </div>
         )}
 

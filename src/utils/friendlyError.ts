@@ -2,14 +2,17 @@
  * Convert raw server/SDK error messages into user-friendly text.
  * Returns { title, detail } for the toast.
  */
+import { osToDem } from './amount'
+
+// The node reports balances and fees in OS (10^9 per DEM).
 export default function friendlyError(raw: string): { title: string; detail: string } {
   const s = raw.replace(/\\n/g, ' ').trim()
 
   // --- Balance errors ---
   const balMatch = s.match(/Insufficient balance[:\s]*need\s+(\d+)\s+but\s+have\s+(\d+)/i)
   if (balMatch) {
-    const need = balMatch[1]
-    const have = balMatch[2]
+    const need = osToDem(balMatch[1])
+    const have = osToDem(balMatch[2])
     return {
       title: 'Insufficient Balance',
       detail: `Your wallet has ${have} DEM but this transaction requires ${need} DEM.`
@@ -22,7 +25,7 @@ export default function friendlyError(raw: string): { title: string; detail: str
     const [, total, amount, fee, have] = balFeeMatch
     return {
       title: 'Insufficient Balance',
-      detail: `Need ${total} DEM (${amount} + ${fee} fee) but your wallet only has ${have} DEM.`
+      detail: `Need ${osToDem(total)} DEM (${osToDem(amount)} + ${osToDem(fee)} fee) but your wallet only has ${osToDem(have)} DEM.`
     }
   }
 

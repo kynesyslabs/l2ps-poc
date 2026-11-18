@@ -49,7 +49,7 @@ function App() {
     await wallet.connectWallet(async (demosInstance, addr) => {
       await tx.fetchL1Transactions(demosInstance, addr)
       await tx.fetchL2PSMempoolInfo(demosInstance)
-      await tx.fetchL2PSTransactions(demosInstance, addr)
+      await tx.fetchL2PSTransactions(demosInstance)
     })
   }
 
@@ -119,8 +119,6 @@ function App() {
                 setAmount={tx.setAmount}
                 txCount={tx.txCount}
                 setTxCount={tx.setTxCount}
-                txMessage={tx.txMessage}
-                setTxMessage={tx.setTxMessage}
                 sending={tx.sending}
                 sendTransaction={tx.sendTransaction}
                 showSettings={tx.showSettings}

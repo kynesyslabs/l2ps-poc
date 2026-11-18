@@ -20,7 +20,7 @@ const IntroModal: FC<IntroModalProps> = ({ onClose }) => {
             <span className="intro-feature-icon private">💸</span>
             <div>
               <strong>Private Transfer</strong>
-              <p>Send value where the amount and memo are encrypted — the network stores only ciphertext. Only you and the recipient can read them.</p>
+              <p>Send value where the receiver and amount are encrypted — the network stores only ciphertext and settles from a commitment. Only you and the subnet members can read them.</p>
             </div>
           </div>
           <div className="intro-feature">
@@ -35,7 +35,7 @@ const IntroModal: FC<IntroModalProps> = ({ onClose }) => {
         <button className="intro-cta" onClick={onClose}>
           Start with a Private Transfer →
         </button>
-        <p className="intro-foot">Non-production demo · testnet subnet</p>
+        <p className="intro-foot">Non-production demo · launch rehearsal subnet</p>
       </div>
     </div>
   )

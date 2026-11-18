@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { Demos } from '@kynesyslabs/demosdk/websdk'
 import PrivacyReveal from './PrivacyReveal'
+import { MAX_TX_COUNT } from '../hooks/useTransactions'
 
 interface SendTabProps {
   demos: Demos | null
@@ -13,8 +14,6 @@ interface SendTabProps {
   setAmount: (a: string) => void
   txCount: number
   setTxCount: (c: number) => void
-  txMessage: string
-  setTxMessage: (m: string) => void
   sending: boolean
   showSettings: boolean
   setShowSettings: (s: boolean) => void
@@ -40,8 +39,6 @@ const SendTab: FC<SendTabProps> = ({
   setAmount,
   txCount,
   setTxCount,
-  txMessage,
-  setTxMessage,
   sending,
   showSettings,
   setShowSettings,
@@ -116,19 +113,11 @@ const SendTab: FC<SendTabProps> = ({
           placeholder="0.0"
         />
 
-        <label className="label">Message</label>
-        <input
-          value={txMessage}
-          onChange={e => setTxMessage(e.target.value)}
-          placeholder="Enter message..."
-        />
-
         {mode === 'l2ps' && (
           <PrivacyReveal
             demos={demos}
             recipient={recipient}
             amount={amount}
-            message={txMessage}
             l2psUid={l2psUid}
             aesKey={aesKey}
             iv={iv}
@@ -140,9 +129,9 @@ const SendTab: FC<SendTabProps> = ({
         <input
           type="number"
           min={1}
-          max={100}
+          max={MAX_TX_COUNT}
           value={txCount}
-          onChange={e => setTxCount(parseInt(e.target.value) || 1)}
+          onChange={e => setTxCount(Math.min(MAX_TX_COUNT, Math.max(1, parseInt(e.target.value) || 1)))}
         />
 
         {/* Fee Notice for L2PS */}
@@ -158,8 +147,8 @@ const SendTab: FC<SendTabProps> = ({
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <span style={{ color: '#94a3b8' }}>Transaction Fee (burned)</span>
-            <span style={{ fontWeight: 'bold', color: '#a855f7' }}>1 DEM</span>
+            <span style={{ color: '#94a3b8' }}>Network fee, charged when the transfer settles on L1</span>
+            <span style={{ fontWeight: 'bold', color: '#a855f7' }}>see preview</span>
           </div>
         )}
 

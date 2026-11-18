@@ -7,7 +7,7 @@ interface TxHistoryItem {
   l1BatchHash?: string
   timestamp: number
   type: 'l1' | 'l2ps'
-  amount?: number
+  amount?: string
   status: 'pending' | 'in_mempool' | 'confirmed' | 'failed'
   message?: string
   from?: string

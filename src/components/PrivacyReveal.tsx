@@ -1,12 +1,13 @@
 import { useEffect, useState, type FC } from 'react'
 import type { Demos } from '@kynesyslabs/demosdk/websdk'
-import { buildInnerTransaction, createL2PSInstance } from '../utils/l2ps'
+import { buildPrivateTransfer, createL2PSInstance } from '../utils/l2ps'
+import type { L2PSEncryptedPayload } from '../utils/l2ps'
+import { demToOs, osToDem } from '../utils/amount'
 
 interface PrivacyRevealProps {
   demos: Demos | null
   recipient: string
   amount: string
-  message: string
   l2psUid: string
   aesKey: string
   iv: string
@@ -22,24 +23,14 @@ interface Cipher {
 
 type Status = 'idle' | 'encrypting' | 'done' | 'error'
 
-// Pull the L2PSEncryptedPayload out of whatever shape encryptTx returns
-// (the SDK wraps it as content.data = ['l2psEncryptedTx', payload]).
-function extractPayload(encTx: unknown): Cipher | null {
-  const anyTx = encTx as Record<string, any>
-  const p =
-    anyTx?.content?.data?.[1] ??
-    anyTx?.content?.data ??
-    anyTx?.payload ??
-    anyTx
-  if (p && typeof p.encrypted_data === 'string') {
-    return {
-      encrypted_data: p.encrypted_data,
-      tag: p.tag ?? '',
-      original_hash: p.original_hash ?? '',
-      l2ps_uid: p.l2ps_uid ?? '',
-    }
+function toCipher(p: L2PSEncryptedPayload | undefined): Cipher | null {
+  if (!p || typeof p.encrypted_data !== 'string') return null
+  return {
+    encrypted_data: p.encrypted_data,
+    tag: p.tag ?? '',
+    original_hash: p.original_hash ?? '',
+    l2ps_uid: p.l2ps_uid ?? '',
   }
-  return null
 }
 
 function shortAddr(a: string): string {
@@ -55,7 +46,6 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
   demos,
   recipient,
   amount,
-  message,
   l2psUid,
   aesKey,
   iv,
@@ -64,8 +54,14 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
   const [status, setStatus] = useState<Status>('idle')
   const [cipher, setCipher] = useState<Cipher | null>(null)
   const [revealed, setRevealed] = useState(false)
+  const [fee, setFee] = useState<string>('')
 
-  const amountNum = Number(amount) || 0
+  let amountDem = '—'
+  try {
+    amountDem = osToDem(demToOs(amount))
+  } catch {
+    // Invalid input: the send refuses it with a clear message.
+  }
 
   useEffect(() => {
     if (!demos) return
@@ -73,31 +69,37 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
     setStatus('encrypting')
     const t = setTimeout(async () => {
       try {
-        // Real client-side encryption: build the inner transfer, then encrypt
-        // it with the subnet's AES-256-GCM key exactly as a live send does.
-        const inner = await buildInnerTransaction(demos, recipient, amountNum, {
-          message,
-          l2ps_uid: l2psUid,
-        })
+        // Real client-side encryption: the same settled transfer a live send
+        // builds, never submitted. The next nonce is passed explicitly so the
+        // preview does not reserve one.
         const l2ps = await createL2PSInstance(aesKey, iv, l2psUid, nodeUrl || '')
-        const enc = await l2ps.encryptTx(inner)
-        const payload = extractPayload(enc)
+        const from = await demos.getEd25519Address()
+        const nonce = (await demos.getAddressNonce(from)) + 1
+        const transfer = await buildPrivateTransfer(demos, l2ps, {
+          to: recipient,
+          amountOs: demToOs(amount),
+          l2psUid,
+          nonce,
+        })
+        const payload = toCipher(transfer.payload)
         if (!cancelled) {
           setCipher(payload)
+          setFee(osToDem(transfer.fee))
           setStatus(payload ? 'done' : 'error')
         }
       } catch {
         if (!cancelled) {
           setCipher(null)
+          setFee('')
           setStatus('error')
         }
       }
-    }, 350)
+    }, 600)
     return () => {
       cancelled = true
       clearTimeout(t)
     }
-  }, [demos, recipient, amountNum, message, l2psUid, aesKey, iv, nodeUrl])
+  }, [demos, recipient, amount, l2psUid, aesKey, iv, nodeUrl])
 
   const encrypting = status === 'encrypting'
 
@@ -123,8 +125,8 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
           </div>
           <dl className="reveal-fields">
             <div><dt>To</dt><dd className="mono">{shortAddr(recipient)}</dd></div>
-            <div><dt>Amount</dt><dd>{amountNum} DEM</dd></div>
-            <div><dt>Memo</dt><dd>{message || '—'}</dd></div>
+            <div><dt>Amount</dt><dd>{amountDem} DEM</dd></div>
+            <div><dt>Fee</dt><dd>{fee ? `${fee} DEM` : '—'}</dd></div>
           </dl>
         </div>
 
@@ -149,14 +151,14 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
           {revealed ? (
             <dl className="reveal-fields">
               <div><dt>To</dt><dd className="mono">{shortAddr(recipient)}</dd></div>
-              <div><dt>Amount</dt><dd>{amountNum} DEM</dd></div>
-              <div><dt>Memo</dt><dd>{message || '—'}</dd></div>
+              <div><dt>Amount</dt><dd>{amountDem} DEM</dd></div>
+              <div><dt>Fee</dt><dd>{fee ? `${fee} DEM` : '—'}</dd></div>
             </dl>
           ) : (
             <dl className="reveal-fields">
               <div><dt>Subnet</dt><dd className="mono">{cipher?.l2ps_uid || l2psUid}</dd></div>
               <div><dt>Amount</dt><dd><span className="redact">▓▓▓▓▓</span></dd></div>
-              <div><dt>Memo</dt><dd><span className="redact">▓▓▓▓▓▓▓▓</span></dd></div>
+              <div><dt>Receiver</dt><dd><span className="redact">▓▓▓▓▓▓▓▓</span></dd></div>
               <div className="wide">
                 <dt>Payload</dt>
                 <dd className="mono cipher-blob">
@@ -179,8 +181,8 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
       </div>
 
       <p className="reveal-foot">
-        The amount and memo are encrypted on your device — the network stores only ciphertext.
-        Only the sender and holders of the subnet key can read them.
+        The receiver and amount are encrypted on your device. Validators settle the transfer from a
+        commitment without reading them; only the sender and holders of the subnet key can.
       </p>
     </div>
   )
