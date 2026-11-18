@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Demos } from '@kynesyslabs/demosdk/websdk'
 import {
   buildPrivateTransfer,
@@ -9,15 +9,23 @@ import {
 import { demToOs, osToDem } from '../utils/amount'
 import friendlyError from '../utils/friendlyError'
 
-// The subnet key and IV are handed to testers out of band; the bundle is
-// public, so it must not carry them.
+// The subnet key and IV are handed to testers out of band and typed in at
+// runtime; the bundle is public, so no build variable may carry them.
 export const DEFAULT_L2PS_UID = import.meta.env.VITE_L2PS_UID || 'l2ps_web_demo'
-export const DEFAULT_AES_KEY = import.meta.env.VITE_L2PS_AES_KEY || ''
-export const DEFAULT_IV = import.meta.env.VITE_L2PS_IV || ''
+export const DEFAULT_AES_KEY = ''
+export const DEFAULT_IV = ''
 
 // Members refuse a transfer whose nonce runs more than ~18 ahead of the
 // sender's L1 nonce, so one burst stays well inside that window.
 export const MAX_TX_COUNT = 10
+const MAX_NONCE_AHEAD = 18
+
+// getAddressNonce is the confirmed nonce, and a private transfer only moves
+// it when its batch settles (~2 min), so nonces handed out since are tracked
+// here. A transfer refused at settlement never consumes its nonce; after this
+// long without the chain catching up, the tracked value is dropped so the
+// account cannot stay stuck behind the gap.
+const NONCE_TRACK_TTL_MS = 5 * 60_000
 
 // Transaction status type
 export interface TxHistoryItem {
@@ -69,6 +77,7 @@ export function useTransactions({
   const [amount, setAmount] = useState<string>('5')
   const [txCount, setTxCount] = useState<number>(1)
   const [sending, setSending] = useState<boolean>(false)
+  const nextNonce = useRef<{ key: string; value: number; at: number } | null>(null)
 
   // History & L2PS Status
   const [l1History, setL1History] = useState<TxHistoryItem[]>([])
@@ -267,7 +276,14 @@ export function useTransactions({
       const signerAddress = normalizeHex(await demos.getEd25519Address(), 'Ed25519 address')
       const toAddress = normalizeHex(recipient, 'Recipient address')
 
-      let currentNonce = (await demos.getAddressNonce(signerAddress)) + 1
+      const confirmed = await demos.getAddressNonce(signerAddress)
+      const trackKey = `${nodeUrl}|${signerAddress}`
+      const tracked = nextNonce.current
+      const useTracked = tracked && tracked.key === trackKey && Date.now() - tracked.at < NONCE_TRACK_TTL_MS
+      let currentNonce = Math.max(confirmed + 1, useTracked ? tracked.value : 0)
+      if (currentNonce + count - 1 > confirmed + MAX_NONCE_AHEAD) {
+        throw new Error(`Too many transfers are still waiting to settle (next nonce ${currentNonce}, chain at ${confirmed}). Wait until earlier ones are confirmed in History.`)
+      }
       const sentHashes: string[] = []
       let feeOs = 0n
 
@@ -292,6 +308,7 @@ export function useTransactions({
         sentHashes.push(hash)
         addLog(`Sent ${typeLabel} tx ${i + 1}: ${hash.slice(0, 16)}...`)
         currentNonce++
+        nextNonce.current = { key: trackKey, value: currentNonce, at: Date.now() }
 
         if (i < count - 1) {
           await new Promise(r => setTimeout(r, 500))

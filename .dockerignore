@@ -3,3 +3,5 @@ dist
 .git
 .github
 *.md
+# Local env overrides must not reach an image build.
+.env*

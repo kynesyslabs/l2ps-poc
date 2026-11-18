@@ -39,10 +39,10 @@ L2PS transactions are **encrypted client-side** before leaving the wallet. The P
 Create `.env` in `docs/l2ps-poc/`:
 ```bash
 VITE_NODE_URL="http://127.0.0.1:53550"
-VITE_L2PS_UID="testnet_l2ps_001"
-VITE_L2PS_AES_KEY="b9346ff30a8202cd46caa7b4b0142bfc727c99cc0f8667580af945b493038055"
-VITE_L2PS_IV="f5405674114eb2adea5774d36b701a6d"
+VITE_L2PS_UID="l2ps_web_demo"
 ```
+
+The subnet AES key and IV are never build variables: the bundle is public. Enter them in the UI.
 
 **Option B: UI Settings**
 
