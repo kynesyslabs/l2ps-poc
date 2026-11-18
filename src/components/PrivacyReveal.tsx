@@ -74,7 +74,7 @@ const PrivacyReveal: FC<PrivacyRevealProps> = ({
         // preview does not reserve one.
         const l2ps = await createL2PSInstance(aesKey, iv, l2psUid, nodeUrl || '')
         const from = await demos.getEd25519Address()
-        const nonce = (await demos.getAddressNonce(from)) + 1
+        const nonce = (await demos.getL2PSNonce(from, l2psUid)) + 1
         const transfer = await buildPrivateTransfer(demos, l2ps, {
           to: recipient,
           amountOs: demToOs(amount),
