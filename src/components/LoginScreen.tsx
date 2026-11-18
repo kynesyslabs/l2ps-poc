@@ -11,8 +11,7 @@ interface LoginScreenProps {
 
 // Quick-pick RPC endpoints so nobody has to type a long node URL.
 const RPC_PRESETS = [
-  { id: 'devnet', name: 'Devnet', hint: 'dev.node2 · finalizes', url: 'https://dev.node2.demos.sh:53650', recommended: true },
-  { id: 'testnet', name: 'Testnet', hint: 'node2 · public', url: 'https://node2.demos.sh:53550', recommended: false },
+  { id: 'rehearsal', name: 'Launch rehearsal', hint: 'rc.13 · L2PS settlement', url: 'https://45-13-233-189.sslip.io', recommended: true },
   { id: 'local', name: 'Local', hint: '127.0.0.1', url: 'http://localhost:53550', recommended: false },
 ] as const
 
@@ -116,7 +115,7 @@ const LoginScreen: FC<LoginScreenProps> = ({
             margin: '0.25rem 0 1rem',
             fontStyle: 'italic'
           }}>
-            💡 Click "Generate New" for a fresh test wallet
+            💡 Use the funded tester phrase you were given; a generated wallet starts with 0 DEM
           </p>
 
           <div className="flex-row">

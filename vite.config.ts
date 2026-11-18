@@ -27,6 +27,12 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['snarkjs'],
   },
+  // demosdk 4.0.21 spawns its TLSNotary worker with `new Worker(new URL(...))`;
+  // that worker imports shared chunks, which Vite's default iife worker format
+  // cannot express, so the build fails without ES-module workers.
+  worker: {
+    format: 'es',
+  },
   server: {
     proxy: {
       '/rpc': {

@@ -258,6 +258,7 @@
   font-size: 0.65rem; font-weight: 700; letter-spacing: 0.03em;
   padding: 0.15rem 0.45rem; border-radius: 5px; text-transform: uppercase;
 }
+.rpc-badge.rehearsal,
 .rpc-badge.devnet { color: #c4b5fd; background: rgba(139, 92, 246, 0.2); }
 .rpc-badge.testnet { color: #67e8f9; background: rgba(0, 212, 255, 0.16); }
 .rpc-badge.local { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); }

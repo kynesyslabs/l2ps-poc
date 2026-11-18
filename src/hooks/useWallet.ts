@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
 import { Demos } from '@kynesyslabs/demosdk/websdk'
 import * as bip39 from 'bip39'
+import { osToDem } from '../utils/amount'
 
-// Default to the devnet RPC — it's a single-node net that actually finalizes,
-// so the demo works out of the box. Override with VITE_NODE_URL.
-export const DEFAULT_NODE_URL = import.meta.env.VITE_NODE_URL || 'https://dev.node2.demos.sh:53650'
+// The v1.0.0-rc.13 launch rehearsal runs the l2psSettlement fork this app
+// builds for; older networks reject settled transfers. Override with VITE_NODE_URL.
+export const DEFAULT_NODE_URL = import.meta.env.VITE_NODE_URL || 'https://45-13-233-189.sslip.io'
 
 type ShowToastFn = (type: 'success' | 'error' | 'info', title: string, message?: string) => void
 type AddLogFn = (msg: string) => void
@@ -52,10 +53,11 @@ export function useWallet(showToast: ShowToastFn, addLog: AddLogFn) {
         // Balance could be in different formats - try multiple field names
         // bigint from DB might come as string
         const bal = info.balance ?? info.nativeBalance ?? info.amount ?? 0
-        const balStr = typeof bal === 'bigint' ? bal.toString() : String(bal)
+        // The node reports OS (10^9 per DEM) since the osDenomination fork.
+        const balDem = osToDem(typeof bal === 'bigint' ? bal : String(bal))
 
-        setBalance(balStr)
-        addLog(`Balance: ${balStr} DEM`)
+        setBalance(balDem)
+        addLog(`Balance: ${balDem} DEM`)
       } else {
         addLog(`Balance fetch failed: result=${response?.result}`)
         console.log('[Balance] Failed response:', response)
@@ -82,7 +84,8 @@ export function useWallet(showToast: ShowToastFn, addLog: AddLogFn) {
       addLog('Node connected')
 
       addLog('Connecting wallet...')
-      await demosInstance.connectWallet(mnemonic)
+      // Settlement signs its commitment with ed25519, so pin the algorithm.
+      await demosInstance.connectWallet(mnemonic, { algorithm: 'ed25519' })
 
       const addr = await demosInstance.getEd25519Address()
       const formattedAddr = addr.startsWith('0x') ? addr : `0x${addr}`

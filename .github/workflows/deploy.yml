@@ -37,8 +37,8 @@ jobs:
         with:
           context: .
           push: true
-          build-args: |
-            VITE_NODE_URL=${{ vars.VITE_NODE_URL || 'https://demosnode.discus.sh' }}
+          # No VITE_NODE_URL: the default RPC lives in src/hooks/useWallet.ts,
+          # next to the presets, so code review sees it change.
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.tag }}
             ghcr.io/${{ github.repository }}:latest
