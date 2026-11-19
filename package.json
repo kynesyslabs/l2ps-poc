@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@kynesyslabs/demosdk": "4.0.21",
+    "@kynesyslabs/demosdk": "4.0.22",
     "@noble/curves": "^1.9.7",
     "@tanstack/react-query": "^5.90.17",
     "@wagmi/core": "^3.2.2",

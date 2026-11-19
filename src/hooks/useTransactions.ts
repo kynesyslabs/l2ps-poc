@@ -20,11 +20,12 @@ export const DEFAULT_IV = ''
 export const MAX_TX_COUNT = 10
 const MAX_NONCE_AHEAD = 18
 
-// getAddressNonce is the confirmed nonce, and a private transfer only moves
-// it when its batch settles (~2 min), so nonces handed out since are tracked
-// here. A transfer refused at settlement never consumes its nonce; after this
-// long without the chain catching up, the tracked value is dropped so the
-// account cannot stay stuck behind the gap.
+// Private transfers use the account's L2PS nonce in their subnet, which only
+// moves when their batch settles, so nonces handed out since are tracked here,
+// per node, account and nonce space (L1 or the subnet). A transfer refused at
+// settlement never consumes its nonce; after this long without the chain
+// catching up, the tracked value is dropped so the account cannot stay stuck
+// behind the gap.
 const NONCE_TRACK_TTL_MS = 5 * 60_000
 
 // Transaction status type
@@ -86,7 +87,7 @@ export function useTransactions({
   const [amount, setAmount] = useState<string>('5')
   const [txCount, setTxCount] = useState<number>(1)
   const [sending, setSending] = useState<boolean>(false)
-  const nextNonce = useRef<{ key: string; value: number; at: number } | null>(null)
+  const nextNonce = useRef(new Map<string, { value: number; at: number }>())
 
   // History & L2PS Status
   const [l1History, setL1History] = useState<TxHistoryItem[]>([])
@@ -308,10 +309,12 @@ export function useTransactions({
       const signerAddress = normalizeHex(await demos.getEd25519Address(), 'Ed25519 address')
       const toAddress = normalizeHex(recipient, 'Recipient address')
 
-      const confirmed = await demos.getAddressNonce(signerAddress)
-      const trackKey = `${nodeUrl}|${signerAddress}`
-      const tracked = nextNonce.current
-      const useTracked = tracked && tracked.key === trackKey && Date.now() - tracked.at < NONCE_TRACK_TTL_MS
+      const confirmed = l2ps
+        ? await demos.getL2PSNonce(signerAddress, l2psUid)
+        : await demos.getAddressNonce(signerAddress)
+      const trackKey = `${nodeUrl}|${signerAddress}|${l2ps ? l2psUid : 'l1'}`
+      const tracked = nextNonce.current.get(trackKey)
+      const useTracked = tracked && Date.now() - tracked.at < NONCE_TRACK_TTL_MS
       let currentNonce = Math.max(confirmed + 1, useTracked ? tracked.value : 0)
       if (currentNonce + count - 1 > confirmed + MAX_NONCE_AHEAD) {
         throw new Error(`Too many transfers are still waiting to settle (next nonce ${currentNonce}, chain at ${confirmed}). Wait until earlier ones are confirmed in History.`)
@@ -350,7 +353,7 @@ export function useTransactions({
         sentHashes.push(hash)
         addLog(`Sent ${typeLabel} tx ${i + 1}: ${hash.slice(0, 16)}...`)
         currentNonce++
-        nextNonce.current = { key: trackKey, value: currentNonce, at: Date.now() }
+        nextNonce.current.set(trackKey, { value: currentNonce, at: Date.now() })
 
         if (i < count - 1) {
           await new Promise(r => setTimeout(r, 500))
